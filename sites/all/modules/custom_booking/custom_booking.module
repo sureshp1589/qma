@@ -179,24 +179,68 @@ function custom_booking_get_musiums() {
   $api_url = variable_get('api_url');
   $shopId = variable_get('api_username');
   $password = variable_get('api_password');
-	$data_string = '{"Criteria":{},"Context": {"ShopId":"$shopId","Password":"$password","Language":"EN"}}';
-	$cURL = curl_init("$api_url");
-  curl_setopt($cURL, CURLOPT_HTTPHEADER, array('Accept: application/json', 'Content-Type: application/json')); 
-	curl_setopt($cURL, CURLOPT_POST, true);
-	curl_setopt($cURL, CURLOPT_POSTFIELDS, $data_string);
-	curl_setopt($cURL, CURLOPT_RETURNTRANSFER, true);
-  curl_setopt($cURL, CURLOPT_SSL_VERIFYPEER, false);                  
-	$result = curl_exec($cURL);
-  if(curl_errno($cURL)){
-    $json = curl_error($cURL);
+  $allExposition = '{"Criteria":{},"Context":{"ShopId":"'.$shopId.'","Password":"'.$password.'","Language":"EN"}}';
+  $url = $api_url.'/General/ListDivisions/';
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json', 'Content-Type: application/json'));
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_POSTFIELDS,$allExposition);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  $response  = curl_exec($ch);
+  if(curl_errno($ch)){
+  $json = curl_error($ch);
   }else{
-    $json = json_decode($result, true);
+  $json = json_decode($response, true);
   }
-	$content_type = curl_getinfo($cURL, CURLINFO_CONTENT_TYPE);
-	curl_close($cURL);
-	echo "<pre>";
-	print_r($json);exit;
-	
+  curl_close($ch);
+
+  $museumList = array();
+  foreach($json['divisions'] as $k => $v){
+   $museumList[] = array('museum_id'=>$v['id'], 'museum_name'=>$v['name']);
+  }
+  echo "<pre>";
+  print_r($museumList);
+  exit;
+  $allExposition = '{"SearchCriteria":{},"Context":{"ShopId":"'.$shopId.'","Password":"'.$password.'","Language":"EN"}}';
+  $url = $api_url.'/Expositions/FindExpositions/';
+
+  $ch = curl_init();
+  curl_setopt($ch, CURLOPT_URL, $url);
+  curl_setopt($ch, CURLOPT_HTTPHEADER, array('Accept: application/json', 'Content-Type: application/json'));
+  curl_setopt($ch, CURLOPT_POST, 1);
+  curl_setopt($ch, CURLOPT_POSTFIELDS,$allExposition);
+  curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
+  curl_setopt($ch, CURLOPT_SSL_VERIFYPEER, false);
+  $response  = curl_exec($ch);
+  if(curl_errno($ch)){
+    $json = curl_error($ch);
+  }else{
+    $json = json_decode($response, true);
+  }
+  curl_close($ch);
+  $devi_ID = 'db287f31-941c-e911-a2d8-005056b0828f'; # GET THIS ID FROM https://testtickets.qm.org.qa/json/General/ListDivisions/ SERVICE
+  $museum_Ticket = array();
+  foreach($json['expositions'] as $k => $v){
+    if($v['divisionId'] == $devi_ID){
+      $museum_Ticket["expositionId"]  = $v['id'];
+      $museum_Ticket["code"]    = $v['code'];
+      $museum_Ticket["image"]   = $v['image'];
+      $museum_Ticket["name"]    = $v['name'];
+      $museum_Ticket["from"]    = $v['from'];
+      $museum_Ticket["until"]   = $v['until'];
+      $museum_Ticket["maxVisitorsPerPeriod"] = $v['maxVisitorsPerPeriod'];
+      $museum_Ticket["startDate"] = $v['startDate'];
+      $museum_Ticket["endDate"] = $v['endDate'];
+      $museum_Ticket["prices"] = array(); 
+      foreach($v['prices'] as $p_key => $p_val){
+        $museum_Ticket["prices"][] = array("amount"=>$p_val['amount'], "price_id"=>$p_val['id'], "price_group_id"=>$p_val['group']['id'], "group_name"=>$p_val['group']['name'], "price_group_code"=>$p_val['group']['code']);        
+      }
+    }
+  }
+  echo "<pre>";
+  print_r($museum_Ticket);
 	
   
 }
